@@ -1,2 +1,267 @@
 # samtykkespill2d
 Samtykkespill 2d
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<title>Samtykkespillet</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    display: flex;
+}
+#gameContainer {
+    padding: 10px;
+}
+canvas {
+    background: #e8f5ff;
+    border: 2px solid #333;
+}
+#sidePanel {
+    width: 260px;
+    padding: 10px;
+    background: #ffffff;
+    border-left: 2px solid #333;
+}
+
+h2 {
+    margin-top: 5px;
+}
+
+.item {
+    font-size: 20px;
+}
+
+#questionBox {
+    position: fixed;
+    top: 20%;
+    left: 20%;
+    width: 60%;
+    background: #fff;
+    border: 3px solid #333;
+    padding: 20px;
+    display: none;
+}
+
+.answer {
+    padding: 8px;
+    margin: 5px 0;
+    border: 1px solid #666;
+    cursor: pointer;
+}
+
+.correct {
+    background: #c8f7c5;
+}
+
+.wrong {
+    background: #f7c5c5;
+}
+</style>
+</head>
+
+<body>
+
+<div id="gameContainer">
+<canvas id="game" width="700" height="300"></canvas>
+</div>
+
+<div id="sidePanel">
+<h2>Poeng: <span id="points">0</span></h2>
+<h3>Forsterkere</h3>
+<div id="inventory"></div>
+
+<h3>Butikk (5 poeng)</h3>
+<button onclick="buyItem('🍫 Sjokolade')">Sjokolade</button><br>
+<button onclick="buyItem('🍟 Potetgull')">Potetgull</button><br>
+<button onclick="buyItem('🥇 Gullbar')">Gullbar</button><br>
+<button onclick="buyItem('🌸 Blomst')">Blomst</button><br>
+<button onclick="buyItem('🐶 Hund')">Hund</button><br>
+<button onclick="buyItem('🐱 Katt')">Katt</button><br>
+<button onclick="buyItem('🐴 Hest')">Hest</button>
+</div>
+
+<div id="questionBox"></div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let player = { x: 50, y: 220, vy: 0, grounded: true };
+let gravity = 0.8;
+let starX = 500;
+
+let points = 0;
+let level = 0;
+let currentQuestion = null;
+
+const levels = [
+    [
+        {
+            q: "Hvem eier kroppen din?",
+            answers: ["Du selv", "Læreren", "Venner"],
+            correct: 0
+        },
+        {
+            q: "Er det lov å si nei til klem?",
+            answers: ["Ja", "Nei"],
+            correct: 0
+        },
+        {
+            q: "Er det greit at noen tar på deg uten å spørre?",
+            answers: ["Nei", "Ja"],
+            correct: 0
+        },
+        {
+            q: "Kan du bestemme over egen kropp?",
+            answers: ["Ja", "Nei"],
+            correct: 0
+        },
+        {
+            q: "Har alle mennesker grenser?",
+            answers: ["Ja", "Nei"],
+            correct: 0
+        }
+    ],
+    [
+        {
+            q: "Pubertet betyr at kroppen endrer seg.",
+            answers: ["Riktig", "Feil"],
+            correct: 0
+        },
+        {
+            q: "Alle kommer i pubertet.",
+            answers: ["Riktig", "Feil"],
+            correct: 0
+        }
+    ],
+    [
+        {
+            q: "Samtykke betyr å si ja frivillig.",
+            answers: ["Riktig", "Feil"],
+            correct: 0
+        },
+        {
+            q: "Samtykke kan tas tilbake.",
+            answers: ["Riktig", "Feil"],
+            correct: 0
+        }
+    ],
+    [
+        {
+            q: "Seksualitet handler også om følelser.",
+            answers: ["Riktig", "Feil"],
+            correct: 0
+        }
+    ],
+    [
+        {
+            q: "Er det lurt å sende nakenbilder?",
+            answers: ["Nei", "Ja"],
+            correct: 0
+        },
+        {
+            q: "Kan bilder deles videre uten kontroll?",
+            answers: ["Ja", "Nei"],
+            correct: 0
+        }
+    ]
+];
+
+function drawPlayer() {
+    ctx.fillStyle = "#333";
+    ctx.fillRect(player.x, player.y, 20, 20);
+}
+
+function drawGround() {
+    ctx.fillStyle = "#555";
+    ctx.fillRect(0, 240, canvas.width, 60);
+}
+
+function drawStar() {
+    ctx.fillStyle = "gold";
+    ctx.beginPath();
+    ctx.arc(starX, 200, 8, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function update() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    player.vy += gravity;
+    player.y += player.vy;
+
+    if (player.y >= 220) {
+        player.y = 220;
+        player.vy = 0;
+        player.grounded = true;
+    }
+
+    if (Math.abs(player.x - starX) < 15) {
+        showQuestion();
+        starX += 300;
+    }
+
+    drawGround();
+    drawStar();
+    drawPlayer();
+
+    requestAnimationFrame(update);
+}
+
+document.addEventListener("keydown", e => {
+    if (e.key === "ArrowRight") player.x += 10;
+    if (e.key === "ArrowUp" && player.grounded) {
+        player.vy = -12;
+        player.grounded = false;
+    }
+});
+
+function showQuestion() {
+    if (levels[level].length === 0) {
+        level++;
+        if (level >= levels.length) return;
+    }
+
+    currentQuestion = levels[level][0];
+    const box = document.getElementById("questionBox");
+    box.innerHTML = "<h3>" + currentQuestion.q + "</h3>";
+
+    currentQuestion.answers.forEach((a, i) => {
+        const div = document.createElement("div");
+        div.className = "answer";
+        div.innerText = a;
+        div.onclick = () => checkAnswer(i, div);
+        box.appendChild(div);
+    });
+
+    box.style.display = "block";
+}
+
+function checkAnswer(i, div) {
+    if (i === currentQuestion.correct) {
+        div.classList.add("correct");
+        points++;
+        document.getElementById("points").innerText = points;
+        levels[level].shift();
+        setTimeout(() => {
+            document.getElementById("questionBox").style.display = "none";
+        }, 800);
+    } else {
+        div.classList.add("wrong");
+        const correctText = currentQuestion.answers[currentQuestion.correct];
+        setTimeout(() => {
+            alert("Riktig svar er: " + correctText);
+        }, 300);
+    }
+}
+
+function buyItem(item) {
+    if (points >= 5) {
+        points -= 5;
+        document.getElementById("points").innerText = points;
+        const inv = document.getElementById("inventory");
+        const div = document.createElement("div");
+        div.className = "item";
